@@ -1,49 +1,67 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import CardTask from "@/components/card-task.vue";
 import CreateTaskDialog from "@/components/create-task-dialog.vue";
+import DeleteConfirmDialog from "@/components/delete-confirm-dialog.vue";
+import EditTaskDialog from "@/components/edit-task-dialog.vue";
 
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { onMounted } from "vue";
+import api from "@/api/axios";
+import type { ITask } from "@/interfaces";
 
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+const selectedTask = ref<ITask | null>(null);
+const tasks = ref<ITask[]>([]);
+const loading = ref(true);
+const error = ref("");
+
+async function fetchTasks() {
+    loading.value = true;
+    error.value = "";
+
+    try {
+        const res = await api.get("/tasks");
+        tasks.value = res.data.data || res.data;
+    } catch (err: any) {
+        error.value = err.response?.data?.message || "Failed to load tasks";
+    } finally {
+        loading.value = false;
+    }
+}
+
+onMounted(() => {
+    fetchTasks();
+});
 
 const editModalOpen = ref(false);
 const deleteAlertOpen = ref(false);
 
-const onClickEditListener = () => {
+const onClickEditListener = (id: number) => {
     editModalOpen.value = true;
+    selectedTask.value = tasks.value.find((e) => e.id === id) ?? null;
 };
 
-const onClickDeleteListener = () => {
+const onClickDeleteListener = (id: number) => {
     deleteAlertOpen.value = true;
+    selectedTask.value = tasks.value.find((e) => e.id === id) ?? null;
+};
+
+const onClickCompleteListener = async (id: number) => {
+    const task = tasks.value.find((t) => t.id === id);
+    if (!task) return;
+
+    const oldStatus = task.status;
+    task.status = "complete";
+
+    try {
+        await api.put(`/tasks/${id}`, { status: "complete" });
+    } catch (err) {
+        // rollback if API fails
+        task.status = oldStatus;
+        console.error("Failed to update task status");
+    }
 };
 </script>
 
@@ -56,7 +74,7 @@ const onClickDeleteListener = () => {
                         <TabsTrigger value="pending">Pending</TabsTrigger>
                         <TabsTrigger value="complete">Complete</TabsTrigger>
                     </TabsList>
-                    <CreateTaskDialog />
+                    <CreateTaskDialog @created="fetchTasks" />
                 </div>
                 <TabsContent value="pending">
                     <Card class="gap-3 bg-muted/10">
@@ -65,17 +83,41 @@ const onClickDeleteListener = () => {
                         </CardHeader>
                         <CardContent>
                             <ScrollArea class="h-128 w-full">
+                                <p
+                                    v-if="loading"
+                                    class="text-center text-sm py-4"
+                                >
+                                    Loading...
+                                </p>
+
+                                <p
+                                    v-if="error"
+                                    class="text-center text-red-500 py-2"
+                                >
+                                    {{ error }}
+                                </p>
+
                                 <div
+                                    v-if="!loading"
                                     class="grid grid-cols-1 lg:grid-cols-2 gap-4"
                                 >
                                     <CardTask
-                                        :title="'Task 1'"
-                                        :description="'lorem ipsome dolor'"
-                                        :onClickEdit="
+                                        v-for="task in tasks.filter(
+                                            (t) => t.status === 'pending'
+                                        )"
+                                        :key="task.id"
+                                        :title="task.title"
+                                        :description="task.description"
+                                        :onClickComplete="
                                             () =>
-                                                onClickEditListener(/* pass id */)
+                                                onClickCompleteListener(task.id)
                                         "
-                                        :onClickDelete="onClickDeleteListener"
+                                        :onClickEdit="
+                                            () => onClickEditListener(task.id)
+                                        "
+                                        :onClickDelete="
+                                            () => onClickDeleteListener(task.id)
+                                        "
                                     ></CardTask>
                                 </div>
                             </ScrollArea>
@@ -89,7 +131,40 @@ const onClickDeleteListener = () => {
                         </CardHeader>
                         <CardContent>
                             <ScrollArea class="h-128 w-full">
-                                <!-- content -->
+                                <p
+                                    v-if="loading"
+                                    class="text-center text-sm py-4"
+                                >
+                                    Loading...
+                                </p>
+
+                                <p
+                                    v-if="error"
+                                    class="text-center text-red-500 py-2"
+                                >
+                                    {{ error }}
+                                </p>
+
+                                <div
+                                    v-if="!loading"
+                                    class="grid grid-cols-1 lg:grid-cols-2 gap-4"
+                                >
+                                    <CardTask
+                                        v-for="task in tasks.filter(
+                                            (t) => t.status === 'complete'
+                                        )"
+                                        :key="task.id"
+                                        :title="task.title"
+                                        :description="task.description"
+                                        :no_complete="true"
+                                        :onClickEdit="
+                                            () => onClickEditListener(task.id)
+                                        "
+                                        :onClickDelete="
+                                            () => onClickDeleteListener(task.id)
+                                        "
+                                    ></CardTask>
+                                </div>
                             </ScrollArea>
                         </CardContent>
                     </Card>
@@ -99,48 +174,16 @@ const onClickDeleteListener = () => {
     </div>
 
     <!-- Edit Dialog -->
-    <Dialog v-model:open="editModalOpen">
-        <form>
-            <DialogContent class="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle class="mb-2">Update Task</DialogTitle>
-                </DialogHeader>
-                <div class="grid gap-4">
-                    <div class="grid gap-3">
-                        <Label for="title">Title</Label>
-                        <Input id="title" name="title" />
-                    </div>
-                    <div class="grid gap-3">
-                        <Label for="description">Description</Label>
-                        <Textarea id="description" name="description" />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <DialogClose as-child>
-                        <Button variant="outline"> Cancel </Button>
-                    </DialogClose>
-                    <Button type="submit"> Create </Button>
-                </DialogFooter>
-            </DialogContent>
-        </form>
-    </Dialog>
+    <EditTaskDialog
+        v-model="editModalOpen"
+        :task="selectedTask"
+        @updated="fetchTasks()"
+    />
 
     <!-- Delete Task Alert Dialog -->
-    <AlertDialog v-model:open="deleteAlertOpen">
-        <AlertDialogContent>
-            <AlertDialogHeader>
-                <AlertDialogTitle
-                    >Are you sure want to delete this task?</AlertDialogTitle
-                >
-                <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    your the task from the server.
-                </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction>Continue</AlertDialogAction>
-            </AlertDialogFooter>
-        </AlertDialogContent>
-    </AlertDialog>
+    <DeleteConfirmDialog
+        v-model="deleteAlertOpen"
+        :task_id="selectedTask?.id ?? null"
+        @deleted="fetchTasks()"
+    />
 </template>

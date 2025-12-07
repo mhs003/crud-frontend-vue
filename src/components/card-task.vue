@@ -8,6 +8,7 @@ interface Props {
     onClickComplete?: () => void;
     onClickEdit?: () => void;
     onClickDelete?: () => void;
+    no_complete?: boolean;
 }
 
 const props = defineProps<Props>();
@@ -27,6 +28,7 @@ const props = defineProps<Props>();
         </div>
         <div class="grid grid-cols-1 gap-1">
             <Button
+                v-if="!no_complete"
                 size="icon-sm"
                 variant="outline"
                 class="cursor-pointer"

@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Icon } from "@iconify/vue";
+import { LogOut } from "lucide-vue-next";
 import { useColorMode } from "@vueuse/core";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "vue-router";
+import { useAuth } from "@/composables/useAuth";
+
+const router = useRouter();
+const { token, logout } = useAuth();
 
 const mode = useColorMode({ disableTransition: false });
 </script>
@@ -21,5 +27,18 @@ const mode = useColorMode({ disableTransition: false });
             icon="radix-icons:sun"
             class="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"
         />
+    </Button>
+
+    <Button
+        v-if="token"
+        @click="
+            logout();
+            router.push('/login');
+        "
+        size="icon"
+        variant="outline"
+        class="rounded-full cursor-pointer absolute top-18 right-6"
+    >
+        <LogOut />
     </Button>
 </template>

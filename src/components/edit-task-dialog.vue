@@ -6,49 +6,59 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-vue-next";
 import { AlertCircleIcon } from "lucide-vue-next";
 import { Alert, AlertTitle } from "@/components/ui/alert";
+import type { ITask } from "@/interfaces";
 
-import { ref } from "vue";
+import { ref, watch } from "vue";
 import api from "@/api/axios";
 
-const open = ref(false);
+interface Props {
+    task: ITask | null;
+    modelValue: boolean;
+}
+
+const props = defineProps<Props>();
+const emit = defineEmits(["update:modelValue", "updated"]);
+
 const title = ref("");
 const description = ref("");
 const loading = ref(false);
 const error = ref("");
 
-const emit = defineEmits(["created"]);
+watch(
+    () => props.task,
+    (t) => {
+        if (t) {
+            title.value = t.title;
+            description.value = t.description;
+        }
+    },
+    { immediate: true }
+);
 
-async function createTask() {
-    if (!title.value.trim()) {
-        error.value = "Title is required";
-        return;
-    }
+async function updateTask() {
+    if (!props.task) return;
 
     loading.value = true;
     error.value = "";
 
     try {
-        await api.post("/tasks", {
+        await api.put(`/tasks/${props.task.id}`, {
             title: title.value,
             description: description.value,
         });
 
-        title.value = "";
-        description.value = "";
+        emit("updated", props.task.id);
 
-        emit("created");
-        open.value = false;
+        emit("update:modelValue", false);
     } catch (err: any) {
-        error.value = err.response?.data?.message || "Failed to create task";
+        error.value = err.response?.data?.message || "Failed to update task";
     } finally {
         loading.value = false;
     }
@@ -56,28 +66,29 @@ async function createTask() {
 </script>
 
 <template>
-    <Dialog v-model:open="open">
-        <DialogTrigger as-child>
-            <Button class="px-10 cursor-pointer" variant="outline">
-                <Plus />New
-            </Button>
-        </DialogTrigger>
-
+    <Dialog
+        :open="props.modelValue"
+        @update:open="emit('update:modelValue', $event)"
+    >
         <DialogContent class="sm:max-w-[425px]">
-            <form @submit.prevent="createTask" class="grid w-full gap-4">
+            <form @submit.prevent="updateTask" class="grid w-full gap-4">
                 <DialogHeader>
-                    <DialogTitle class="mb-2">Create a new Task</DialogTitle>
+                    <DialogTitle class="mb-2">Update Task</DialogTitle>
                 </DialogHeader>
 
                 <div class="grid gap-4">
                     <div class="grid gap-3">
                         <Label for="title">Title</Label>
-                        <Input id="title" v-model="title" />
+                        <Input id="title" name="title" v-model="title" />
                     </div>
 
                     <div class="grid gap-3">
                         <Label for="description">Description</Label>
-                        <Textarea id="description" v-model="description" />
+                        <Textarea
+                            id="description"
+                            name="description"
+                            v-model="description"
+                        />
                     </div>
                 </div>
 
@@ -88,11 +99,13 @@ async function createTask() {
 
                 <DialogFooter>
                     <DialogClose as-child>
-                        <Button variant="outline">Cancel</Button>
+                        <Button variant="outline" :disabled="loading">
+                            Cancel
+                        </Button>
                     </DialogClose>
 
                     <Button type="submit" :disabled="loading">
-                        {{ loading ? "Creating..." : "Create" }}
+                        {{ loading ? "Updating..." : "Update" }}
                     </Button>
                 </DialogFooter>
             </form>
