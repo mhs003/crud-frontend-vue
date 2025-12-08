@@ -27,7 +27,7 @@ const props = defineProps<Props>();
 const emit = defineEmits(["update:modelValue", "updated"]);
 
 const title = ref("");
-const description = ref("");
+const description = ref<string|undefined>("");
 const loading = ref(false);
 const error = ref("");
 
