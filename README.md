@@ -12,7 +12,7 @@ cd crud-frontend-vue
 npm i
 ```
 
-- Update the api base url in [here](https://github.com/mhs003/crud-frontend-vue/blob/8ec4cdc831320bf18b889cfacd9f8edcf3740986/src/api/axios.ts#L4) if needed.
+- Update the api base url in [here](https://github.com/mhs003/crud-frontend-vue/blob/master/src/api/axios.ts#L4) if needed.
 
 
 - Build the application
