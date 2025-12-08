@@ -1,5 +1,28 @@
-# Vue 3 + TypeScript + Vite
+### This repository contains the frontend project of the crud app.
+To get started:
 
-This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+- Clone the repo
+```bash
+git clone https://github.com/mhs003/crud-frontend-vue.git
+cd crud-frontend-vue
+```
 
-Learn more about the recommended Project Setup and IDE Support in the [Vue Docs TypeScript Guide](https://vuejs.org/guide/typescript/overview.html#project-setup).
+- Install the dependencies
+```bash
+npm i
+```
+
+- Update the api base url in [here](https://github.com/mhs003/crud-frontend-vue/blob/8ec4cdc831320bf18b889cfacd9f8edcf3740986/src/api/axios.ts#L4) if needed.
+
+
+- Build the application
+```bash
+npm run build
+```
+
+- Start the application
+```bash
+npm run preview
+```
+
+**To setup the api server, proceed with the [backend](https://github.com/mhs003/crud-backend-laravel) from Here: [https://github.com/mhs003/crud-backend-laravel](https://github.com/mhs003/crud-backend-laravel)**
